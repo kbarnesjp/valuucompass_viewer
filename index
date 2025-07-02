@@ -371,7 +371,7 @@
             
             try {
                 // Query distinct companies from assessments table
-                const { data: companies, error } = await supabase
+                const { data: assessments, error } = await supabase
                     .from('assessments')
                     .select('id, company_name')
                     .order('company_name');
@@ -380,19 +380,20 @@
                 
                 select.innerHTML = '<option value="">-- Select a Company --</option>';
                 
-                // Remove duplicates based on company name
-                const uniqueCompanies = companies.reduce((acc, current) => {
-                    const exists = acc.find(item => item.company_name === current.company_name);
-                    if (!exists) {
-                        acc.push(current);
+                // Group by company name to get unique companies
+                const companyMap = new Map();
+                assessments.forEach(assessment => {
+                    if (!companyMap.has(assessment.company_name)) {
+                        companyMap.set(assessment.company_name, []);
                     }
-                    return acc;
-                }, []);
+                    companyMap.get(assessment.company_name).push(assessment.id);
+                });
                 
-                uniqueCompanies.forEach(company => {
+                // Create options for each unique company
+                companyMap.forEach((assessmentIds, companyName) => {
                     const option = document.createElement('option');
-                    option.value = company.id;
-                    option.textContent = company.company_name;
+                    option.value = JSON.stringify(assessmentIds); // Store all assessment IDs
+                    option.textContent = companyName;
                     select.appendChild(option);
                 });
                 
@@ -408,9 +409,10 @@
         }
 
         async function loadAssessmentData() {
-            const assessmentId = document.getElementById('companySelect').value;
-            if (!assessmentId) return;
+            const selectedValue = document.getElementById('companySelect').value;
+            if (!selectedValue) return;
             
+            const assessmentIds = JSON.parse(selectedValue);
             const container = document.getElementById('dataContainer');
             const errorContainer = document.getElementById('errorContainer');
             
@@ -421,7 +423,7 @@
             container.innerHTML = '<div class="loading">Loading assessment data...</div>';
             
             try {
-                // Query assessment scores with joined data
+                // Query assessment scores for ALL assessment IDs for this company
                 const { data: assessmentData, error } = await supabase
                     .from('assessment_scores')
                     .select(`
@@ -448,7 +450,7 @@
                             )
                         )
                     `)
-                    .eq('assessment_id', assessmentId)
+                    .in('assessment_id', assessmentIds)  // Get data for ALL assessments of this company
                     .order('impact_domain')
                     .order('performance_indicator');
                 
@@ -476,7 +478,16 @@
                 }));
                 
                 if (transformedData && transformedData.length > 0) {
-                    displayAssessments(transformedData);
+                    // Group by stakeholder for better organization
+                    const groupedData = transformedData.reduce((acc, item) => {
+                        if (!acc[item.stakeholder]) {
+                            acc[item.stakeholder] = [];
+                        }
+                        acc[item.stakeholder].push(item);
+                        return acc;
+                    }, {});
+                    
+                    displayAssessmentsGrouped(groupedData);
                 } else {
                     container.innerHTML = `
                         <div class="empty-state">
@@ -506,6 +517,32 @@
                     </div>
                 `;
             }
+        }
+
+        function displayAssessmentsGrouped(groupedData) {
+            const container = document.getElementById('dataContainer');
+            container.innerHTML = '';
+            
+            // Create a section for each stakeholder
+            Object.keys(groupedData).sort().forEach(stakeholder => {
+                const stakeholderSection = document.createElement('div');
+                stakeholderSection.innerHTML = `
+                    <h2 style="color: #2c3e50; margin: 30px 0 20px 0; padding: 10px; background: #ecf0f1; border-radius: 4px;">
+                        ${stakeholder} Stakeholder Assessment
+                    </h2>
+                `;
+                
+                const grid = document.createElement('div');
+                grid.className = 'data-grid';
+                
+                groupedData[stakeholder].forEach(assessment => {
+                    const card = createAssessmentCard(assessment);
+                    grid.appendChild(card);
+                });
+                
+                stakeholderSection.appendChild(grid);
+                container.appendChild(stakeholderSection);
+            });
         }
 
         function displayAssessments(assessments) {
