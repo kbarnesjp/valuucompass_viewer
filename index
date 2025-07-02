@@ -355,7 +355,7 @@
     <script>
         // Your Supabase credentials
         const SUPABASE_URL = 'https://ydnuxffwxdvcfydtkirw.supabase.co';
-        const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY'; // Get this from Supabase Dashboard > Settings > API
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkbnV4ZmZ3eGR2Y2Z5ZHRraXJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0Njk5NzEsImV4cCI6MjA2NzA0NTk3MX0.SlQNF6Bhjx4meod5OyGBTiHlHiunh0frNF3pm3qLRBQ'; // Get this from Supabase Dashboard > Settings > API
         
         // Initialize Supabase client
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
